@@ -1,5 +1,6 @@
 package com.recognai.graphframes
 
+import com.recognai.rdf.spark.store.ESGraphStorage
 import org.apache.spark.sql.SparkSession
 
 /**
@@ -41,7 +42,9 @@ object GraphFramesApp extends App {
   g.inDegrees.show()
   println(g.edges.filter("relationship = 'follow'").count())
 
-  //val results= g.pageRank.resetProbability(0.01).maxIter(5).run()
+  val results= g.pageRank.resetProbability(0.01).maxIter(2).run()
   //results.vertices.select("id","pagerank").show()
+
+  ESGraphStorage(results, "graph/test")
 
 }

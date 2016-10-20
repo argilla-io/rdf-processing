@@ -13,7 +13,7 @@ object module {
     else ObjectProperty(LiteralProperty(value, "string"))
   }
 
-  private[enrichment] def getURIName(uri: String): String = uri.substring(uri.lastIndexOf("/") + 1)
+  import com.recognai.rdf.spark.operations._
 
   object udfFunctions {
 
@@ -86,6 +86,7 @@ class WikidataEnrichment(wikidataPath: String) extends RDFEnrichment {
                                         (implicit sparkSession: SparkSession): Dataset[(String, String)] = {
 
     import sparkSession.implicits._
+    import com.recognai.rdf.spark.operations._
 
     val dataset = wikidata.filter(_.Object.literal.isDefined).as("WD")
 

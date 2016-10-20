@@ -11,28 +11,27 @@ object RDFProcessing {
 
   import operations._
 
-  def apply(inputRDF: RDD[Triple])(implicit sparkSession: SparkSession): Dataset[Subject] = apply(inputRDF, Seq.empty)
+  def apply(inputRDF: RDD[Triple])(implicit sparkSession: SparkSession): (Dataset[Subject], Dataset[Triple]) = apply(inputRDF, Seq.empty)
 
   def apply(inputRDF: RDD[Triple], enrichments: Seq[RDFEnrichment])(implicit sparkSession: SparkSession)
-  : Dataset[Subject] = {
+  : (Dataset[Subject], Dataset[Triple]) = {
     import sparkSession.implicits._
 
     val rdfDF = inputRDF.toDS().as("RDF")
 
-    val enrichedRDF = enrichments.foldLeft(rdfDF)((rdf, enrichment) => rdf.union(enrichment.enrichRDF(rdf)))
+    val enrichedRDF = enrichDataset(enrichments, rdfDF)
 
-    enrichedRDF
+    val subjects = enrichedRDF
       .groupByKey(_.Subject)
       .mapGroups { (subject, groupData) => Subject(subject, createPropertiesMap(groupData)) }
+
+    (subjects, enrichedRDF)
   }
 
-  private def findRDFTypes(rdf: Dataset[Triple])(implicit sparkSession: SparkSession): Dataset[TypeTuple] = {
+  private def enrichDataset(enrichments: Seq[RDFEnrichment], rdfDF: Dataset[Triple])
+                           (implicit sparkSession: SparkSession): Dataset[Triple] = {
 
-    import sparkSession.implicits._
-
-    rdf
-      .filter(_.Predicate == SUBJECT_TYPE_PREDICATE)
-      .map { case Triple(s, _, ObjectProperty(Some(uri), _)) => TypeTuple(s, uri) }
+    enrichments.foldLeft(rdfDF)((rdf, enrichment) => rdf.union(enrichment.enrichRDF(rdf)))
   }
 
   private def createPropertiesMap(group: Iterator[Triple])
@@ -41,8 +40,8 @@ object RDFProcessing {
     def mergeProperties(map: Map[String, Seq[ObjectProperty]], triple: Triple)
     : Map[String, Seq[ObjectProperty]] = {
 
-      val value = map.getOrElse(triple.Predicate, Seq.empty);
-      map + (triple.Predicate -> value.+:(triple.Object))
+      val key = getURIName(triple.Predicate)
+      val value = map.getOrElse(key, Seq.empty); map + (key -> value.+:(triple.Object))
     }
 
     group.foldLeft(Map.empty[String, Seq[ObjectProperty]])(mergeProperties)

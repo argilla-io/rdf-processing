@@ -32,9 +32,18 @@ object operations {
   case class Triple(Subject: String, Predicate: String, Object: ObjectProperty)
 
 
-  case class TypeTuple(Subject: String, Type: String)
+  case class ObjectProperty(uri: Option[String] = None, literal: Option[LiteralProperty] = None) {
 
-  case class ObjectProperty(uri: Option[String] = None, literal: Option[LiteralProperty] = None)
+    def isLiteral(): Boolean = literal match {
+      case Some(_) => true
+      case _ => false
+    }
+
+    def isURI(): Boolean = uri match {
+      case Some(_) => true
+      case _ => false
+    }
+  }
 
   object ObjectProperty {
 
@@ -47,9 +56,17 @@ object operations {
 
     def literals(): Map[String, Seq[LiteralProperty]] = ???
 
-    def getType(): Option[String] = ???
+    // TODO: several types per subject
+    def getType(): Option[String] = properties.get(SUBJECT_TYPE_PREDICATE).flatMap {
+      case a :: _ => a.uri
+      case _ => None
+    }
+
+
   }
 
   def isURIProperty(o: String): Boolean = URIPattern.findFirstMatchIn(o) isDefined
+
+  def getURIName(uri: String): String = uri.substring(uri.lastIndexOf("/") + 1)
 
 }

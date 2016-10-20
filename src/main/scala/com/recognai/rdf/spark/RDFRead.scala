@@ -20,6 +20,7 @@ object RDFRead {
 
   def apply(path: String)(sc: SparkContext): RDD[Triple] =
     sc.textFile(path)
+        .coalesce(16)
       .flatMap(TriplePattern.findAllIn(_).flatMap {
         case TriplePattern(s, p, o) => Some(Triple(s, p, parseProperty(o)))
         case _ => None
